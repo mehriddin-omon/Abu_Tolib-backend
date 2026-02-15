@@ -1,31 +1,26 @@
 import { HttpException } from '@nestjs/common';
-import { Repository } from 'typeorm';
-import { IFindOptions, IResponse } from './interface';
+import { Repository, DeepPartial, FindManyOptions } from 'typeorm';
+import { IResponse } from './interface';
 
-export class BaseService<CreateDto, Entity> {
-  constructor(protected readonly repository: Repository<any>) {}
+export class BaseService<CreateDto extends DeepPartial<Entity>, Entity extends { id: string }> {
+  constructor(protected readonly repository: Repository<Entity>) { }
 
   get getRepository() {
     return this.repository;
   }
 
   async create(createDto: CreateDto): Promise<IResponse<Entity>> {
-    let createdData = this.repository.create({
-      ...createDto,
-    }) as unknown as Entity;
-
-    createdData = await this.repository.save(createdData);
+    const createdData = this.repository.create(createDto);
+    const savedData = await this.repository.save(createdData);
     return {
       status: 201,
       message: 'Created successfully',
-      data: createdData,
+      data: savedData
     };
   }
 
-  async findAll(options?: IFindOptions<Entity>): Promise<IResponse<Entity[]>> {
-    const data = (await this.repository.find({
-      ...options,
-    })) as Entity[];
+  async findAll(options?: FindManyOptions<Entity>): Promise<IResponse<Entity[]>> {
+    const data = (await this.repository.find({ ...options }));
     return {
       status: 200,
       message: 'Success',
@@ -33,7 +28,7 @@ export class BaseService<CreateDto, Entity> {
     };
   }
 
-  async findOneBy(options: IFindOptions<Entity>): Promise<IResponse<Entity>> {
+  async findOneBy(options: FindManyOptions<Entity>): Promise<IResponse<Entity>> {
     const data = (await this.repository.findOne({
       select: options.select || {},
       relations: options.relations || [],
@@ -49,12 +44,13 @@ export class BaseService<CreateDto, Entity> {
     };
   }
 
-  async findOneById(id: string, options?: IFindOptions<Entity>) {
-    const data = (await this.repository.findOne({
+  async findOneById(id: string, options?: FindManyOptions<Entity>) {
+    const where = { ...(options?.where || {}), id } as import('typeorm').FindOptionsWhere<Entity>;
+    const data = await this.repository.findOne({
       select: options?.select || {},
       relations: options?.relations || [],
-      where: { id, ...options?.where },
-    })) as unknown as Entity;
+      where,
+    });
     if (!data) {
       throw new HttpException('Not found', 404);
     }
@@ -64,13 +60,9 @@ export class BaseService<CreateDto, Entity> {
       data,
     };
   }
-
-  async update(id: string, dto: Partial<CreateDto>) {
-    await this.repository.update(id, {
-      ...dto,
-      updatedAt: new Date(Date.now()),
-    });
-    const newData = await this.repository.findOneBy({ id });
+  async update(id: string, dto: any) {
+    await this.repository.update(id, dto);
+    const newData = await this.findOneById(id);
     return {
       status: 200,
       message: 'Updated',

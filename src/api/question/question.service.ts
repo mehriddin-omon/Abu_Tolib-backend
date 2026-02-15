@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QuestionEntity, TopicEntity } from '@my/core';
 import { BaseService, IResponse } from '@my/infrastructure';
-import { CreateQuestionDto, UpdateQuestionDto } from './dto';
+import { CreateQuestionDto } from './dto';
 
 @Injectable()
 export class QuestionService extends BaseService<

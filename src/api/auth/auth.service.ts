@@ -87,7 +87,7 @@ export class AuthService extends BaseService<CreateUserDto, UserEntity> {
     };
   }
 
-  async remove(id: number) {
-    return `This action removes a #${id} auth`;
-  }
+  // async remove(id: string) {
+  //   return `This action removes a #${id} auth`;
+  // }
 }

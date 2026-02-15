@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsArray, IsEmpty, IsNotEmpty, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsNotEmpty, IsOptional, ValidateNested } from "class-validator";
 import { CreateDetailResultDto } from "src/api/detail-results/dto/create-detail-result.dto";
 
 export class CreateResultDto {
@@ -17,7 +17,7 @@ export class CreateResultDto {
     correctAnswer: number;
 
     @IsNotEmpty()
-    timeSpent: number;
+    timeSpent: string;
 
     @IsOptional()
     @IsArray()

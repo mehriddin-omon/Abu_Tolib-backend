@@ -1,5 +1,3 @@
-import { FindManyOptions } from 'typeorm';
-
 export interface IResponse<T> {
   data: T | T[] | null;
   status: number;
@@ -19,5 +17,3 @@ export interface IResponseWithPagination<T> {
   statusCode: number;
   message: string | string[];
 }
-
-export interface IFindOptions<T> extends FindManyOptions<T> {}

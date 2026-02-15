@@ -24,7 +24,7 @@ export class UsersController {
   @UseGuards(GuardService)
   @Get('my-profile')
   async myProfile(@Request() req) {
-    return this.usersService.myProfile(req.user.sub);
+    return this.usersService.myProfile(req);
   }
 
   @Patch(':id')

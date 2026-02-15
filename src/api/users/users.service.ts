@@ -7,20 +7,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class UsersService extends BaseService<
-  CreateUserDto,
-  UserEntity
-> {
+export class UsersService extends BaseService<CreateUserDto, UserEntity> {
   constructor(
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
   ) {
     super(userRepository)
 
-  }
-
-  async findAllUser() {
-    return `This action returns all users`;
   }
 
   async myProfile(id: string) {
@@ -38,6 +31,7 @@ export class UsersService extends BaseService<
   }
 
   updateUser(id: number, updateUserDto: UpdateUserDto) {
+    console.log(updateUserDto);
     return `This action updates a #${id} user`;
   }
 

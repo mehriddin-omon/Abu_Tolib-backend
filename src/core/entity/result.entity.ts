@@ -1,5 +1,5 @@
 import { BaseEntity } from "@my/common";
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, TopologyOpeningEvent } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm";
 import { UserEntity } from "./user.entity";
 import { DetailResultEntity } from "./detail-result.entity";
 import { TopicEntity } from "./topic.entity";
