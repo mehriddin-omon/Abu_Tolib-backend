@@ -1,0 +1,24 @@
+# Caddy HTTPS sertifikatini (Let's Encrypt) avtomatik oladi va yangilaydi.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Backend: /api/v1/...
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	# Frontend: qolgan hamma narsa
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+# www → asosiy domen
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
