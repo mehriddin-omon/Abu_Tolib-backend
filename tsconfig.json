@@ -1,29 +1,24 @@
 {
   "compilerOptions": {
-      "strict": true,
     "module": "commonjs",
-    "declaration": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "declaration": false,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2022",
+    "esModuleInterop": true,
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
-    "paths": {
-      "@my/config": ["./src/config"],
-      "@my/common": ["./src/common"],
-      "@my/core": ["./src/core"],
-      "@my/infrastructure": ["./src/infrastructure"],
-    },
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
+    "strict": true,
     "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src", "test", "drizzle.config.ts"]
 }
