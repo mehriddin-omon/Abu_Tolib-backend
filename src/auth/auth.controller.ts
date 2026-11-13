@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  GoneException,
   HttpCode,
   NotFoundException,
   Post,
@@ -17,7 +18,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { AppConfig } from '../config/app-config.service';
 import { PublicUser, UsersService } from '../users/users.service';
 import { clearAuthCookies, setAuthCookies } from './cookies';
-import { DevLoginDto, PollLoginDto } from './dto/auth.dto';
+import { DevLoginDto, ExchangeLoginDto, PollLoginDto } from './dto/auth.dto';
 import { LoginService, StartedLogin } from './login.service';
 import { SessionMeta, TokenService } from './token.service';
 
@@ -55,6 +56,22 @@ export class AuthController {
     const issued = await this.tokens.issue(result.user, meta(req));
     setAuthCookies(res, this.config, issued);
     return { status: 'confirmed', user: this.users.toPublic(result.user) };
+  }
+
+  /** Bot xabaridagi "Saytga qaytish" tugmasi: bir martalik havola → sessiya */
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('telegram/exchange')
+  @HttpCode(200)
+  async exchange(
+    @Body() dto: ExchangeLoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ user: PublicUser }> {
+    const user = await this.login.exchangeReturnToken(dto.token);
+    if (!user) throw new GoneException('Havola eskirgan yoki allaqachon ishlatilgan');
+    setAuthCookies(res, this.config, await this.tokens.issue(user, meta(req)));
+    return { user: this.users.toPublic(user) };
   }
 
   @Public()

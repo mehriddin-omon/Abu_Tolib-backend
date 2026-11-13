@@ -204,6 +204,45 @@ describe('Auth (e2e)', () => {
       .expect(400);
   });
 
+  it("bot «Saytga qaytish» havolasi: bir marta sessiya beradi, boshqa tokenlarni qabul qilmaydi", async () => {
+    const { poll } = await fullLogin(5001, '998901112233');
+    const link = await login.createReturnLink(poll.body.user.id);
+    expect(link).toMatch(/^http:\/\/localhost:3000\/kirish\/telegram\?t=[\w-]{32}$/);
+    const token = link.split('t=')[1];
+
+    const res = await request(app.getHttpServer())
+      .post(api('/auth/telegram/exchange'))
+      .send({ token })
+      .expect(200);
+    expect(res.body.user.phone).toBe('998901112233');
+    const cookies = res.headers['set-cookie'] as unknown as string[];
+    expect(cookies.some((c) => c.startsWith('rt='))).toBe(true);
+
+    // ikkinchi marta — yo'q
+    await request(app.getHttpServer()).post(api('/auth/telegram/exchange')).send({ token }).expect(410);
+
+    // saytdagi deep link tokeni bilan almashtirib bo'lmaydi
+    const start = await request(app.getHttpServer()).post(api('/auth/telegram/start'));
+    const deep = (start.body.deepLink as string).split('start=login_')[1];
+    await login.handleStart(deep, 5001, 5001);
+    await request(app.getHttpServer())
+      .post(api('/auth/telegram/exchange'))
+      .send({ token: deep })
+      .expect(410);
+    // va qaytish havolasi tokeni bot /start ga yaramaydi
+    const link2 = await login.createReturnLink(poll.body.user.id);
+    await expect(login.handleStart(link2.split('t=')[1], 1, 1)).resolves.toBe('invalid');
+  });
+
+  it("qaytgan talabaning username'i yangilanadi, saytda kiritgan ismi saqlanadi", async () => {
+    await fullLogin(6002, '998903334455', 'Eski');
+    const start = await request(app.getHttpServer()).post(api('/auth/telegram/start'));
+    const token = (start.body.deepLink as string).split('start=login_')[1];
+    await login.handleStart(token, 6002, 6002, { firstName: 'Yangi', username: 'yangi_user' });
+    const u = await login.findRegistered(6002);
+    expect(u).toMatchObject({ firstName: 'Eski', username: 'yangi_user' });
+  });
+
   it('dev-login test/production muhitida yopiq', async () => {
     await request(app.getHttpServer())
       .post(api('/auth/dev-login'))

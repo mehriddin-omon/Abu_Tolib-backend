@@ -16,11 +16,19 @@ export interface StartedLogin {
 }
 
 export type PollResult =
-  | { status: 'pending' }
-  | { status: 'expired' }
-  | { status: 'confirmed'; user: User };
+  { status: 'pending' } | { status: 'expired' } | { status: 'confirmed'; user: User };
 
 export type BotStartResult = 'confirmed' | 'need_contact' | 'expired' | 'invalid';
+
+/** Telegram'dagi ism/familiya/username — har kirishda yangilanadi */
+export interface TelegramNames {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}
+
+/** "Saytga qaytish" havolasi tokeni oddiy kirish tokenidan farq qilishi uchun */
+const RETURN_PREFIX = 'return:';
 export type BotContactResult = 'confirmed' | 'registered' | 'not_own';
 
 /**
@@ -32,11 +40,22 @@ export type BotContactResult = 'confirmed' | 'registered' | 'not_own';
  */
 @Injectable()
 export class LoginService {
+  /** Bot ishga tushganda getMe() dan aniqlanadi (TELEGRAM_BOT_USERNAME berilmagan bo'lsa) */
+  private detectedBotUsername?: string;
+
   constructor(
     @InjectDb() private readonly db: Database,
     private readonly users: UsersService,
     private readonly config: AppConfig,
   ) {}
+
+  setBotUsername(username: string) {
+    this.detectedBotUsername = username;
+  }
+
+  get botUsername(): string | undefined {
+    return this.config.get('TELEGRAM_BOT_USERNAME') || this.detectedBotUsername;
+  }
 
   async start(): Promise<StartedLogin> {
     const token = randomToken(24); // 32 belgi — Telegram start parametri (≤64) ichiga sig'adi
@@ -48,7 +67,7 @@ export class LoginService {
       .values({ tokenHash: sha256(token), pollSecretHash: sha256(pollSecret), expiresAt })
       .returning({ id: loginRequests.id });
 
-    const bot = this.config.get('TELEGRAM_BOT_USERNAME');
+    const bot = this.botUsername;
     return {
       requestId: row.id,
       pollSecret,
@@ -62,7 +81,7 @@ export class LoginService {
       where: eq(loginRequests.id, requestId),
     });
     if (!req || !safeEqualHex(sha256(pollSecret), req.pollSecretHash)) {
-      throw new NotFoundException('Kirish so\'rovi topilmadi');
+      throw new NotFoundException("Kirish so'rovi topilmadi");
     }
 
     if (req.status === 'CONFIRMED' && req.userId) {
@@ -82,23 +101,20 @@ export class LoginService {
   }
 
   /** Bot: /start login_<token> */
-  async handleStart(token: string, chatId: number, telegramUserId: number): Promise<BotStartResult> {
+  async handleStart(
+    token: string,
+    chatId: number,
+    telegramUserId: number,
+    names: TelegramNames = {},
+  ): Promise<BotStartResult> {
     const req = await this.db.query.loginRequests.findFirst({
       where: eq(loginRequests.tokenHash, sha256(token)),
     });
     if (!req) return 'invalid';
     if (!this.isOpen(req)) return 'expired';
 
-    const user = await this.users.findByTelegramId(telegramUserId);
-    if (user?.phone) {
-      // Admin ro'yxati o'zgargan bo'lsa, rolni yangilaymiz
-      const fresh = await this.users.upsertFromTelegram({
-        telegramId: telegramUserId,
-        phone: user.phone,
-        firstName: user.firstName,
-        lastName: user.lastName ?? undefined,
-        username: user.username ?? undefined,
-      });
+    const fresh = await this.findRegistered(telegramUserId, names);
+    if (fresh) {
       await this.confirm(req.id, fresh.id, chatId);
       return 'confirmed';
     }
@@ -141,6 +157,57 @@ export class LoginService {
 
     await this.confirm(pending.id, user.id, chatId);
     return 'confirmed';
+  }
+
+  /**
+   * Telefon raqami bilan ro'yxatdan o'tgan foydalanuvchi. Topilsa — Telegram'dagi ism,
+   * username va (ADMIN_PHONES o'zgargan bo'lsa) rol yangilanadi.
+   */
+  async findRegistered(telegramUserId: number, names: TelegramNames = {}): Promise<User | null> {
+    const user = await this.users.findByTelegramId(telegramUserId);
+    if (!user?.phone) return null;
+    return this.users.upsertFromTelegram({
+      telegramId: telegramUserId,
+      phone: user.phone,
+      firstName: names.firstName ?? user.firstName,
+      lastName: names.lastName ?? user.lastName ?? undefined,
+      username: names.username ?? user.username ?? undefined,
+    });
+  }
+
+  /**
+   * Bot xabaridagi "Saytga qaytish" tugmasi uchun bir martalik havola.
+   * Qaysi brauzerda ochilsa, o'sha yerda sessiya ochiladi (telefon yoki kompyuter).
+   */
+  async createReturnLink(userId: string): Promise<string> {
+    const token = randomToken(24);
+    await this.db.insert(loginRequests).values({
+      tokenHash: sha256(RETURN_PREFIX + token),
+      pollSecretHash: sha256(randomToken(32)), // poll orqali olib bo'lmaydi
+      status: 'CONFIRMED',
+      userId,
+      confirmedAt: new Date(),
+      expiresAt: new Date(Date.now() + this.config.get('LOGIN_REQUEST_TTL_MIN') * 60_000),
+    });
+    const web = this.config.get('WEB_URL').replace(/\/$/, '');
+    return `${web}/kirish/telegram?t=${token}`;
+  }
+
+  /** "Saytga qaytish" havolasini sessiyaga almashtirish. Bir marta ishlaydi. */
+  async exchangeReturnToken(token: string): Promise<User | null> {
+    const [used] = await this.db
+      .update(loginRequests)
+      .set({ status: 'USED' })
+      .where(
+        and(
+          eq(loginRequests.tokenHash, sha256(RETURN_PREFIX + token)),
+          eq(loginRequests.status, 'CONFIRMED'),
+          gt(loginRequests.expiresAt, new Date()),
+        ),
+      )
+      .returning({ userId: loginRequests.userId });
+    if (!used?.userId) return null;
+    return (await this.users.findById(used.userId)) ?? null;
   }
 
   private isOpen(req: LoginRequest) {

@@ -12,6 +12,13 @@ export class PollLoginDto {
   pollSecret: string;
 }
 
+export class ExchangeLoginDto {
+  @ApiProperty({ description: 'Bot xabaridagi "Saytga qaytish" havolasidagi t parametri' })
+  @IsString()
+  @Length(20, 100)
+  token: string;
+}
+
 export class DevLoginDto {
   @ApiProperty({ example: '998901234567' })
   @Matches(/^\+?\d{9,15}$/)
