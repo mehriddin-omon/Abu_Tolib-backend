@@ -51,6 +51,9 @@ src/
 ├─ auth/                     # Telegram orqali kirish, JWT, refresh rotation
 ├─ telegram/                 # grammY bot
 ├─ users/                    # profil, o'quvchilar ro'yxati (admin)
+├─ kontent/                  # bo'limlar, darslar, konspekt (2-qadam)
+├─ savollar/                 # savollar banki, CSV import (2-qadam)
+├─ testlar/                  # testlarni yig'ish, avto-yig'ish (2-qadam)
 └─ health/                   # /api/v1/health
 drizzle/                     # SQL migratsiyalar (git'da saqlanadi)
 deploy/                      # production: compose, Caddy, Droplet skripti
@@ -70,6 +73,39 @@ keyin `app.module.ts` ga import. Servisda bazaga murojaat: `constructor(@InjectD
    ishlatilsa (o'g'irlik belgisi) sessiya bekor qilinadi.
 
 `ADMIN_PHONES` ro'yxatidagi raqam bilan kirgan foydalanuvchi avtomatik `ADMIN` bo'ladi.
+
+## Kontent va savollar banki (2-qadam)
+
+14 bo'lim × 12 dars va ularning kodlari `drizzle/0002_curriculum.sql` migratsiyasida —
+`npm run db:migrate` ularni avtomatik yaratadi (production'da ham). **Dars kodlari muzlatilgan:**
+savollar, mastery va yozma ishlar shu kodlarga bog'lanadi, shuning uchun kod hech qachon o'zgartirilmaydi
+(dars nomini o'zgartirish mumkin).
+
+| Bo'lim | Kod | Bo'lim | Kod |
+|---|---|---|---|
+| Sonlar bilan ishlash | `SON` | Progressiyalar | `PROG` |
+| Nisbat, foiz, o'rtachalar | `FOIZ` | Planimetriya | `PLAN` |
+| Algebraik ifodalar | `IFODA` | Koordinatalar va vektorlar | `KOOR` |
+| Daraja, ildiz, logarifm | `DLOG` | Stereometriya | `STER` |
+| Tenglamalar | `TENG` | Trigonometriya | `TRIG` |
+| Tengsizliklar | `TSIZ` | Kombinatorika, ehtimollik | `KOMB` |
+| Funksiyalar va grafiklar | `FUNK` | Matnli masalalar | `MATN` |
+
+Har bo'limda `-01` … `-11` mavzular, `-12` — yakuniy nazorat (masalan `TENG-04`, `TENG-12`).
+
+**CSV import** (`POST /admin/questions/import`, admin panelda «CSV import» tugmasi). Ajratuvchi `,` yoki `;`
+(avtomatik aniqlanadi), birinchi qator — sarlavha:
+
+| Ustun | Majburiy | Qiymat |
+|---|---|---|
+| `kod` | ha | `TENG-04` |
+| `qiyinlik` | yo'q (2) | `1` oddiy · `2` o'rta · `3` qiyin |
+| `savol` | ha | Markdown + LaTeX (`$x^2$`) |
+| `A` … `F` | — | variantlar; hammasi bo'sh bo'lsa savol «son javob» turida |
+| `javob` | ha | variantli: `A`–`F`; son javob: `2.5` |
+| `izoh`, `manba` | yo'q | yechim va manba |
+
+Avval `dryRun: true` bilan tekshiriladi; bitta qatorda xato bo'lsa ham hech narsa yozilmaydi.
 
 ## Production
 
