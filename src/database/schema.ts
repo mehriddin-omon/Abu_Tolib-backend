@@ -102,6 +102,8 @@ export const loginRequests = pgTable(
 
 export const sections = pgTable('sections', {
   id: uuid('id').primaryKey().defaultRandom(),
+  /** Dars kodlarining prefiksi: "TENG" → TENG-01 … TENG-12. O'zgarmas. */
+  code: text('code').notNull().unique(),
   slug: text('slug').notNull().unique(),
   title: text('title').notNull(),
   order: integer('order').notNull(),
@@ -434,5 +436,12 @@ export const aiReviewsRelations = relations(aiReviews, ({ one }) => ({
 }));
 
 export type User = typeof users.$inferSelect;
+export type Section = typeof sections.$inferSelect;
+export type Lesson = typeof lessons.$inferSelect;
+export type Question = typeof questions.$inferSelect;
+export type QuestionOption = typeof questionOptions.$inferSelect;
+export type QuestionType = (typeof questionTypeEnum.enumValues)[number];
+export type Test = typeof tests.$inferSelect;
+export type TestKind = (typeof testKindEnum.enumValues)[number];
 export type Role = (typeof roleEnum.enumValues)[number];
 export type LoginRequest = typeof loginRequests.$inferSelect;

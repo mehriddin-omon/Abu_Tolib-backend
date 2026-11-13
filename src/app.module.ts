@@ -7,7 +7,10 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { KontentModule } from './kontent/kontent.module';
+import { SavollarModule } from './savollar/savollar.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { TestlarModule } from './testlar/testlar.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -22,7 +25,11 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     TelegramModule,
-    // Keyingi qadamlarda: KontentModule, SavollarModule, TestlarModule, DiagnostikaModule ...
+    // 2-qadam: kontent va savollar banki
+    KontentModule,
+    SavollarModule,
+    TestlarModule,
+    // Keyingi qadamlarda: DiagnostikaModule ...
   ],
   controllers: [HealthController],
   providers: [

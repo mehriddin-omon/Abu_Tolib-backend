@@ -17,6 +17,8 @@ export function setupApp(app: INestApplication) {
   app.setGlobalPrefix(API_PREFIX, { exclude: [] });
   app.use(helmet());
   app.use(cookieParser());
+  // CSV import va uzun konspektlar uchun (standart 100kb yetmaydi)
+  express.useBodyParser('json', { limit: '4mb' });
   app.enableCors({ origin: config.get('WEB_URL'), credentials: true });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
